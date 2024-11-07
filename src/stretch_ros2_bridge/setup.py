@@ -40,6 +40,7 @@ setup(
     entry_points={
         "console_scripts": [
             "camera_pose_publisher = stretch_ros2_bridge.nodes.camera_pose_publisher:main",
+            "iphone_cam = stretch_ros2_bridge.nodes.iphone_cam:main",
             "rotate_images = scripts.rotate_images",
             "state_estimator = stretch_ros2_bridge.nodes.state_estimator:main",
             "goto_controller = stretch_ros2_bridge.nodes.goto_controller:main",
