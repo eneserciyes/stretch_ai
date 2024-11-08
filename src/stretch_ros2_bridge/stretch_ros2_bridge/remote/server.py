@@ -257,8 +257,9 @@ class ZmqServer(BaseZmqServer):
     def _get_iphone_cam_message(self) -> Dict[str, Any]:
         # Read images from the end effector and head cameras
         ee_color_image = self.client.iphone_cam.get()
+        compressed_ee_color_image = compression.to_jpg(ee_color_image)
         iphone_output = {
-            "iphone_cam/color_image": ee_color_image,
+            "iphone_cam/color_image": compressed_ee_color_image,
         }
         return iphone_output
 
