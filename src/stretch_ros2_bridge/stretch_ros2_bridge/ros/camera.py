@@ -242,3 +242,80 @@ class RosCamera(Camera):
             "height": self.height,
             "width": self.width,
         }
+
+class IphoneCamera:
+    def __init__(
+        self,
+        ros_client,
+        name: str = "/camera/color",
+        verbose: bool = True,
+        rotations: int = 0,
+        buffer_size: int = None,
+        image_ext: str = "/image_raw",
+    ):
+        """
+        """
+
+        self._ros_client = ros_client
+        self.name = name
+        self.rotations = rotations
+
+        # Initialize
+        self._img = None
+        self._t = Time()
+        self._lock = threading.Lock()
+        print(name)
+
+        self.buffer_size = buffer_size
+        if self.buffer_size is not None:
+            # create buffer
+            self._buffer: deque = deque()
+
+        self.topic_name = name + image_ext
+        self._sub = self._ros_client.create_subscription(Image, self.topic_name, self._cb, 1)
+
+    def get(self, device=None):
+        """return the current image associated with this camera"""
+        with self._lock:
+            if self._img is None:
+                return None
+            else:
+                # Return a copy
+                img = self._img.copy()
+
+        if device is not None:
+            # If a device is specified, assume we want to move to pytorch
+            import torch
+
+            img = torch.FloatTensor(img).to(device)
+
+        return img
+
+    def _cb(self, msg):
+        """capture the latest image and save it"""
+        with self._lock:
+            img = image_to_numpy(msg)
+
+            # Image orientation
+            self._img = np.rot90(img, k=self.rotations)
+
+            # Add to buffer
+            self._t = msg.header.stamp
+            if self.buffer_size is not None:
+                self._add_to_buffer(img)
+
+    def wait_for_image(self) -> None:
+        """Wait for image. Needs to be sort of slow, in order to make sure we give it time
+        to update the image in the backend."""
+        # rospy.sleep(0.2)
+        rate = self._ros_client.create_rate(5)
+        while rclpy.ok():
+            with self._lock:
+                if self.buffer_size is None:
+                    if self._img is not None:
+                        break
+                else:
+                    # Wait until we have a full buffer
+                    if len(self._buffer) >= self.buffer_size:
+                        break
+            rate.sleep()

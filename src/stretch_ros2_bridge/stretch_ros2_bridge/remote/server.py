@@ -27,12 +27,13 @@ from stretch_ros2_bridge.ros.map_saver import MapSerializerDeserializer
 
 class ZmqServer(BaseZmqServer):
     @override
-    def __init__(self, use_d405: bool = True, *args, **kwargs):
+    def __init__(self, use_d405: bool = True, use_iphone: bool = False, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # ROS2 client interface
-        self.client = StretchClient(d405=use_d405)
+        self.client = StretchClient(d405=use_d405, iphone=use_iphone)
         self.use_d405 = use_d405
+        self.use_iphone = use_iphone
 
         # Map saver - write and load map information from SLAM
         self.map_saver = MapSerializerDeserializer()
@@ -253,11 +254,21 @@ class ZmqServer(BaseZmqServer):
         }
         return d405_output
 
+    def _get_iphone_cam_message(self) -> Dict[str, Any]:
+        # Read images from the end effector and head cameras
+        ee_color_image = self.client.iphone_cam.get()
+        iphone_output = {
+            "iphone_cam/color_image": ee_color_image,
+        }
+        return iphone_output
+
     def get_servo_message(self) -> Dict[str, Any]:
         if self.use_d405:
-            d405_output = self._get_ee_cam_message()
+            ee_camera_message = self._get_ee_cam_message()
+        elif self.use_iphone:
+            ee_camera_message = self._get_iphone_cam_message()
         else:
-            d405_output = {}
+            ee_camera_message = {}
 
         obs = self.client.get_observation(compute_xyz=False)
         head_color_image, head_depth_image = self._rescale_color_and_depth(
@@ -285,7 +296,7 @@ class ZmqServer(BaseZmqServer):
             "robot/config": obs.joint,
             "step": self._last_step,
         }
-        message.update(d405_output)
+        message.update(ee_camera_message)
         return message
 
 

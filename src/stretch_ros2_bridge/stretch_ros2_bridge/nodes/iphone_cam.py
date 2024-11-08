@@ -1,14 +1,19 @@
 import time
+from threading import Event
+from typing import Optional
+
 import cv2
 import numpy as np
-from record3d import Record3DStream
-from threading import Event
-
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import CameraInfo, Image
+from record3d import Record3DStream
+from sensor_msgs.msg import Image
+
 from stretch_ros2_bridge.ros.msg_numpy import numpy_to_image
 
+
+DEFAULT_IPHONE_COLOR_TOPIC = "/iphone_cam/color"
+DEFAULT_IPHONE_DEPTH_TOPIC = "/iphone_cam/depth"
 
 class R3DApp:
     def __init__(self):
@@ -70,18 +75,24 @@ class R3DApp:
         )
         return rgb, depth, pose
 
+
 # TODO: make this a ROS Node
 class R3DCameraPublisher(Node):
-    def __init__(self, ee_rgb_topic, ee_depth_topic, use_depth):
+    def __init__(
+        self,
+        ee_rgb_topic: Optional[str] = None,
+        ee_depth_topic: Optional[str] = None,
+        use_depth: Optional[bool] = False,
+    ):
         super().__init__("r3d_camera_publisher")
 
-        self.ee_rgb_topic = ee_rgb_topic
-        self.ee_depth_topic = ee_depth_topic
+        self.ee_rgb_topic = DEFAULT_IPHONE_COLOR_TOPIC if ee_rgb_topic is None else ee_rgb_topic
+        self.ee_depth_topic = DEFAULT_IPHONE_DEPTH_TOPIC if ee_depth_topic is None else ee_depth_topic
         self.use_depth = use_depth
 
-        self._rgb_pub = self.create_publisher(Image, ee_rgb_topic, 10)
+        self._rgb_pub = self.create_publisher(Image, self.ee_rgb_topic + "/image_raw", 10)
         if use_depth:
-            self._depth_pub = self.create_publisher(Image, ee_depth_topic, 10)
+            self._depth_pub = self.create_publisher(Image, self.ee_depth_topic + "/image_raw", 10)
 
         self._seq = 0
 
@@ -102,7 +113,8 @@ class R3DCameraPublisher(Node):
             except RuntimeError as e:
                 self.get_logger().error(str(e))
                 self.get_logger().error(
-                    f"Retrying to connect to device with id {dev_idx}, make sure the device is connected and id is correct..."                )
+                    f"Retrying to connect to device with id {dev_idx}, make sure the device is connected and id is correct..."
+                )
                 time.sleep(2)
 
     # get the RGB and depth images from the Record3D
@@ -155,7 +167,7 @@ def main():
     """Init and Spin the Node"""
 
     rclpy.init()
-    r3d_camera_publisher = R3DCameraPublisher("ee_rgb", "ee_depth", use_depth=False)
+    r3d_camera_publisher = R3DCameraPublisher()
     rclpy.spin(r3d_camera_publisher)
 
     r3d_camera_publisher.destroy_node()

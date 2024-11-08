@@ -20,7 +20,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     start_server = Node(
         package="stretch_ros2_bridge",
-        executable="server_no_d405",
+        executable="server_iphone",
         name="ros2_zmq_server",
         output="screen",
         on_exit=launch.actions.Shutdown(),
@@ -55,8 +55,8 @@ def generate_launch_description():
     ld = LaunchDescription(
         [
             stretch_cameras_launch,
-            # base_slam_launch,
-            # start_server,
+            base_slam_launch,
+            start_server,
             iphone_cam_node,
         ]
     )

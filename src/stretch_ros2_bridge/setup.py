@@ -48,6 +48,7 @@ setup(
             "orbslam3 = stretch_ros2_bridge.nodes.orbslam3:main",
             "server = stretch_ros2_bridge.remote.server:main",
             "server_no_d405 = stretch_ros2_bridge.remote.server_no_d405:main",
+            "server_iphone = stretch_ros2_bridge.remote.server_iphone:main",
         ],
     },
 )

@@ -63,7 +63,7 @@ from stretch_ros2_bridge.constants import (
     ROS_WRIST_ROLL,
     ROS_WRIST_YAW,
 )
-from stretch_ros2_bridge.ros.camera import RosCamera
+from stretch_ros2_bridge.ros.camera import RosCamera, IphoneCamera
 from stretch_ros2_bridge.ros.lidar import RosLidar
 from stretch_ros2_bridge.ros.streaming_activator import StreamingActivator
 from stretch_ros2_bridge.ros.utils import matrix_from_pose_msg
@@ -74,6 +74,7 @@ DEFAULT_DEPTH_TOPIC = "/camera/aligned_depth_to_color"
 DEFAULT_LIDAR_TOPIC = "/scan"
 DEFAULT_EE_COLOR_TOPIC = "/gripper_camera/color"
 DEFAULT_EE_DEPTH_TOPIC = "/gripper_camera/aligned_depth_to_color"
+DEFAULT_IPHONE_COLOR_TOPIC = "/iphone_cam/color"
 
 
 class StretchRosInterface(Node):
@@ -110,6 +111,7 @@ class StretchRosInterface(Node):
         lidar_topic: Optional[str] = None,
         verbose: bool = False,
         d405: bool = True,
+        iphone: bool = False,
         ee_color_topic: Optional[str] = None,
         ee_depth_topic: Optional[str] = None,
     ):
@@ -169,6 +171,7 @@ class StretchRosInterface(Node):
         self._depth_topic = DEFAULT_DEPTH_TOPIC if depth_topic is None else depth_topic
         self._ee_color_topic = DEFAULT_EE_COLOR_TOPIC if ee_color_topic is None else ee_color_topic
         self._ee_depth_topic = DEFAULT_EE_DEPTH_TOPIC if ee_depth_topic is None else ee_depth_topic
+        self._iphone_color_topic = DEFAULT_IPHONE_COLOR_TOPIC # if iphone_color_topic is None else iphone_color_topic
         self._lidar_topic = DEFAULT_LIDAR_TOPIC if lidar_topic is None else lidar_topic
         self._depth_buffer_size = depth_buffer_size
 
@@ -183,7 +186,7 @@ class StretchRosInterface(Node):
         self.rgb_cam: RosCamera = None
         self.dpt_cam: RosCamera = None
         if init_cameras:
-            self._create_cameras(use_d405=d405)
+            self._create_cameras(use_d405=d405, use_iphone=iphone)
             self._wait_for_cameras()
         if init_lidar:
             self._lidar = RosLidar(self, self._lidar_topic)
@@ -507,7 +510,7 @@ class StretchRosInterface(Node):
         for i in range(3, self.dof):
             self.ros_joint_names += CONFIG_TO_ROS[i]
 
-    def _create_cameras(self, use_d405: bool = True):
+    def _create_cameras(self, use_d405: bool = True, use_iphone: bool = False):
         if self.rgb_cam is not None or self.dpt_cam is not None:
             raise RuntimeError("Already created cameras")
         print("Creating cameras...")
@@ -531,9 +534,20 @@ class StretchRosInterface(Node):
                 rotations=0,
                 image_ext="/image_raw",
             )
+            self.iphone_cam = None
+        elif use_iphone:
+            # TODO: do something
+            self.iphone_cam = IphoneCamera(
+                self,
+                self._iphone_color_topic,
+                image_ext="/image_raw"
+            )
+            self.ee_rgb_cam = None
+            self.ee_dpt_cam = None
         else:
             self.ee_rgb_cam = None
             self.ee_dpt_cam = None
+            self.iphone_cam = None
         self.filter_depth = self._depth_buffer_size is not None
 
     def _wait_for_lidar(self):
@@ -553,6 +567,9 @@ class StretchRosInterface(Node):
         if self.ee_dpt_cam is not None:
             print("Waiting for end effector depth camera images...")
             self.ee_dpt_cam.wait_for_image()
+        if self.iphone_cam is not None:
+            print("Waiting for iphone camera images...")
+            self.iphone_cam.wait_for_image()
         print("..done.")
         if self.verbose:
             print("rgb frame =", self.rgb_cam.get_frame())

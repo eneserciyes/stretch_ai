@@ -457,6 +457,7 @@ class RerunVisualizer:
             )
         else:
             rr.log("world/ee_camera/depth", rr.depthimage(servo.ee_depth))
+        # TODO: don't show depth at all
 
         if self.show_cameras_in_3d_view:
             rot, trans = decompose_homogeneous_matrix(servo.ee_camera_pose)

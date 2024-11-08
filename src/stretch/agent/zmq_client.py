@@ -1443,6 +1443,9 @@ class HomeRobotZmqClient(AbstractRobotClient):
             color_image = compression.from_jpg(message["ee_cam/color_image"])
             depth_image = compression.from_jp2(message["ee_cam/depth_image"])
             depth_image = depth_image / 1000
+        elif "iphone_cam/color_image" in message:
+            color_image = message["iphone_cam/color_image"]
+            depth_image = None
         else:
             color_image = None
             depth_image = None
