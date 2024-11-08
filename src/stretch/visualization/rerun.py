@@ -432,7 +432,7 @@ class RerunVisualizer:
         # EE Camera
         rr.log("world/ee_camera/rgb", rr.Image(servo.ee_rgb))
 
-        if self.show_camera_point_clouds:
+        if self.show_camera_point_clouds and servo.ee_depth is not None:
             ee_xyz = servo.get_ee_xyz_in_world_frame().reshape(-1, 3)
             ee_rgb = servo.ee_rgb.reshape(-1, 3)
             # Remove points below z = 0
